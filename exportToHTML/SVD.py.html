@@ -1,0 +1,99 @@
+<html>
+<head>
+<title>SVD.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+.s6 { color: #5f826b; font-style: italic;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+SVD.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">pandas </span><span class="s0">as </span><span class="s1">pd</span>
+<span class="s0">import </span><span class="s1">numpy </span><span class="s0">as </span><span class="s1">np</span>
+<span class="s0">from </span><span class="s1">sklearn</span><span class="s2">.</span><span class="s1">metrics</span><span class="s2">.</span><span class="s1">pairwise </span><span class="s0">import </span><span class="s1">cosine_similarity</span>
+<span class="s0">from </span><span class="s1">sklearn</span><span class="s2">.</span><span class="s1">preprocessing </span><span class="s0">import </span><span class="s1">StandardScaler</span>
+<span class="s0">from </span><span class="s1">scipy</span><span class="s2">.</span><span class="s1">sparse </span><span class="s0">import </span><span class="s1">csr_matrix</span>
+<span class="s0">from </span><span class="s1">scipy</span><span class="s2">.</span><span class="s1">sparse</span><span class="s2">.</span><span class="s1">linalg </span><span class="s0">import </span><span class="s1">svds</span>
+
+<span class="s3"># Load the first 50,000 rows of the movie dataset</span>
+<span class="s1">movie_data </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">read_csv</span><span class="s2">(</span><span class="s4">'/Users/vishn/Downloads/rotten_tomatoes_movies.csv'</span><span class="s2">, </span><span class="s1">nrows</span><span class="s2">=</span><span class="s5">50000</span><span class="s2">)</span>
+
+<span class="s3"># Select relevant features for similarity calculation</span>
+<span class="s1">features </span><span class="s2">= [</span><span class="s4">'audienceScore'</span><span class="s2">, </span><span class="s4">'tomatoMeter'</span><span class="s2">, </span><span class="s4">'runtimeMinutes'</span><span class="s2">]</span>
+
+<span class="s3"># Fill missing values with zeros for simplicity</span>
+<span class="s1">movie_data</span><span class="s2">[</span><span class="s1">features</span><span class="s2">] = </span><span class="s1">movie_data</span><span class="s2">[</span><span class="s1">features</span><span class="s2">].</span><span class="s1">fillna</span><span class="s2">(</span><span class="s5">0</span><span class="s2">)</span>
+
+<span class="s3"># Standardize the features</span>
+<span class="s1">scaler </span><span class="s2">= </span><span class="s1">StandardScaler</span><span class="s2">()</span>
+<span class="s1">scaled_features </span><span class="s2">= </span><span class="s1">scaler</span><span class="s2">.</span><span class="s1">fit_transform</span><span class="s2">(</span><span class="s1">movie_data</span><span class="s2">[</span><span class="s1">features</span><span class="s2">])</span>
+
+<span class="s3"># Compute cosine similarity between movies based on selected features</span>
+<span class="s1">similarity_matrix </span><span class="s2">= </span><span class="s1">cosine_similarity</span><span class="s2">(</span><span class="s1">scaled_features</span><span class="s2">)</span>
+
+<span class="s3"># Convert similarity matrix to DataFrame for easier manipulation</span>
+<span class="s1">similarity_df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">similarity_matrix</span><span class="s2">, </span><span class="s1">index</span><span class="s2">=</span><span class="s1">movie_data</span><span class="s2">[</span><span class="s4">'title'</span><span class="s2">], </span><span class="s1">columns</span><span class="s2">=</span><span class="s1">movie_data</span><span class="s2">[</span><span class="s4">'title'</span><span class="s2">])</span>
+
+<span class="s3"># Convert movie features to a sparse matrix</span>
+<span class="s1">movie_features_sparse </span><span class="s2">= </span><span class="s1">csr_matrix</span><span class="s2">(</span><span class="s1">scaled_features</span><span class="s2">)</span>
+
+<span class="s3"># Check the shape of the sparse matrix</span>
+<span class="s1">print</span><span class="s2">(</span><span class="s4">&quot;Shape of the sparse matrix:&quot;</span><span class="s2">, </span><span class="s1">movie_features_sparse</span><span class="s2">.</span><span class="s1">shape</span><span class="s2">)</span>
+
+<span class="s3"># Apply Singular Value Decomposition (SVD)</span>
+<span class="s1">k </span><span class="s2">= </span><span class="s1">min</span><span class="s2">(</span><span class="s1">movie_features_sparse</span><span class="s2">.</span><span class="s1">shape</span><span class="s2">) - </span><span class="s5">1  </span><span class="s3"># Choose k such that it satisfies 0 &lt; k &lt; min(A.shape)</span>
+<span class="s1">U</span><span class="s2">, </span><span class="s1">sigma</span><span class="s2">, </span><span class="s1">Vt </span><span class="s2">= </span><span class="s1">svds</span><span class="s2">(</span><span class="s1">movie_features_sparse</span><span class="s2">, </span><span class="s1">k</span><span class="s2">=</span><span class="s1">k</span><span class="s2">)  </span><span class="s3"># Choosing k for latent factors</span>
+
+<span class="s3"># Convert sigma to diagonal matrix</span>
+<span class="s1">sigma </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">diag</span><span class="s2">(</span><span class="s1">sigma</span><span class="s2">)</span>
+
+<span class="s3"># Make predictions for movie features</span>
+<span class="s1">predicted_features </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">dot</span><span class="s2">(</span><span class="s1">np</span><span class="s2">.</span><span class="s1">dot</span><span class="s2">(</span><span class="s1">U</span><span class="s2">, </span><span class="s1">sigma</span><span class="s2">), </span><span class="s1">Vt</span><span class="s2">)</span>
+
+<span class="s3"># Convert predicted features to DataFrame</span>
+<span class="s1">predicted_features_df </span><span class="s2">= </span><span class="s1">pd</span><span class="s2">.</span><span class="s1">DataFrame</span><span class="s2">(</span><span class="s1">predicted_features</span><span class="s2">, </span><span class="s1">index</span><span class="s2">=</span><span class="s1">movie_data</span><span class="s2">[</span><span class="s4">'title'</span><span class="s2">], </span><span class="s1">columns</span><span class="s2">=</span><span class="s1">features</span><span class="s2">)</span>
+
+<span class="s0">def </span><span class="s1">recommend_similar_movies</span><span class="s2">(</span><span class="s1">movie_title</span><span class="s2">, </span><span class="s1">num_recommendations</span><span class="s2">=</span><span class="s5">5</span><span class="s2">):</span>
+    <span class="s6">&quot;&quot;&quot; 
+    Function to recommend similar movies based on item-based filtering. 
+    - movie_title: Title of the mo.sort_values(ascending=False) 
+ 
+    Args: 
+ 
+    # Exclude the input movie itself from recommendations 
+    similar_movies = similar_movies.drop(movie_title)vie for which recommendations are sought. 
+    - num_recommendations: Number of recommendations to return. 
+ 
+    Returns: 
+    - List of recommended movie titles. 
+    &quot;&quot;&quot;</span>
+    <span class="s3"># Retrieve similarity scores for the given movie</span>
+    <span class="s1">movie_similarities </span><span class="s2">= </span><span class="s1">similarity_df</span><span class="s2">.</span><span class="s1">loc</span><span class="s2">[</span><span class="s1">movie_title</span><span class="s2">]</span>
+
+    <span class="s3"># Sort movies by similarity scores in descending order</span>
+    <span class="s1">similar_movies </span><span class="s2">= </span><span class="s1">movie_similarities</span>
+
+    <span class="s3"># Get top N recommended movies</span>
+    <span class="s1">recommendations </span><span class="s2">= </span><span class="s1">similar_movies</span><span class="s2">.</span><span class="s1">head</span><span class="s2">(</span><span class="s1">num_recommendations</span><span class="s2">)</span>
+
+    <span class="s0">return </span><span class="s1">recommendations</span>
+
+
+<span class="s3"># Example usage:</span>
+<span class="s1">movie_title </span><span class="s2">= </span><span class="s4">&quot;The Dark Knight&quot;</span>
+<span class="s1">recommended_movies </span><span class="s2">= </span><span class="s1">recommend_similar_movies</span><span class="s2">(</span><span class="s1">movie_title</span><span class="s2">)</span>
+<span class="s1">print</span><span class="s2">(</span><span class="s4">&quot;Recommended movies for '{}':&quot;</span><span class="s2">.</span><span class="s1">format</span><span class="s2">(</span><span class="s1">movie_title</span><span class="s2">))</span>
+<span class="s1">print</span><span class="s2">(</span><span class="s1">recommended_movies</span><span class="s2">)</span>
+</pre>
+</body>
+</html>
